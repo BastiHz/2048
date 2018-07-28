@@ -42,6 +42,12 @@ DIRECTIONS = {
     pg.K_UP: "up",
     pg.K_DOWN: "down"
 }
+DIRECTION_ROTATION_LEFT = {  # How many times to rotate from the left position.
+    "left": 0,
+    "up": 1,
+    "right": 2,
+    "down": 3
+}
 
 
 screen = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
@@ -49,12 +55,12 @@ clock = pg.time.Clock()
 
 
 class Tile:
-    def __init__(self, position, value=None):
+    def __init__(self, grid_x, grid_y, value=None):
         if value is not None:
             self.value = value
         else:
             self.value = 4 if random.random() < CHANCE_OF_4 else 2
-        self.position = position
+        self.position = (0, 0)
         self.color = TILE_COLORS[self.value]
         self.surface = pg.Surface((TILE_SIZE, TILE_SIZE))
         self.rect = self.surface.get_rect()
@@ -62,8 +68,15 @@ class Tile:
         number_surf = FONT.render(str(self.value), True, FONT_COLOR, self.color)
         number_rect = number_surf.get_rect()
         number_rect.center = self.rect.center
-        self.rect.topleft = self.position
         self.surface.blit(number_surf, number_rect)
+        self.update_position(grid_x, grid_y)
+
+    def update_position(self, x, y):
+        self.position = (
+            MARGIN_WIDTH + (TILE_SIZE + GAP_WIDTH) * x,
+            MARGIN_WIDTH + (TILE_SIZE + GAP_WIDTH) * y
+        )
+        self.rect.topleft = self.position
 
     def draw(self):
         screen.blit(self.surface, self.rect)
@@ -73,7 +86,6 @@ class Board:
     def __init__(self):
         self.board = [[None for y in range(BOARD_SIZE)] for x in range(BOARD_SIZE)]
         self.tiles = set()
-        self.tiles_are_moving = False
 
         # place the first two tiles:
         tiles_placed = 0
@@ -81,28 +93,47 @@ class Board:
             x = random.choice(range(BOARD_SIZE))
             y = random.choice(range(BOARD_SIZE))
             if self.board[x][y] is None:
-                new_tile = Tile(
-                    position=(
-                        MARGIN_WIDTH + (TILE_SIZE + GAP_WIDTH) * x,
-                        MARGIN_WIDTH + (TILE_SIZE + GAP_WIDTH) * y
-                    )
-                )
+                new_tile = Tile(x, y)
                 self.board[x][y] = new_tile
                 self.tiles.add(new_tile)
                 tiles_placed += 1
 
-    def update(self, dt):
-        pass
+    def handle_input(self, direction):
+        self.move_tiles(DIRECTION_ROTATION_LEFT[direction])
 
-    def move_tiles(self, direction):
-        pass
+    def rotate_board(self, times):
+        for _ in range(times):
+            rotated_board = [i[:] for i in self.board]
+            for x in range(BOARD_SIZE):
+                for y in range(BOARD_SIZE):
+                    rotated_board[x][BOARD_SIZE - 1 - y] = self.board[y][x]
+            self.board = [i[:] for i in rotated_board]
+
+    def move_tiles(self, rotate_n):
+        self.rotate_board(rotate_n)
+
+        for y in range(BOARD_SIZE):
+            for x in range(1, BOARD_SIZE):
+                tile = self.board[x][y]
+                if tile is not None:
+                    left_tile = self.board[x - 1][y]
+                    if left_tile is None:
+                        self.board[x - 1][y] = tile
+                        self.board[x][y] = None
+
+        self.rotate_board(4 - rotate_n)  # Rotate the board back.
+
+        for x in range(BOARD_SIZE):
+            for y in range(BOARD_SIZE):
+                tile = self.board[x][y]
+                if tile is not None:
+                     tile.update_position(x, y)
 
     def draw(self):
         for tile in self.tiles:
             tile.draw()
 
 
-#test = Tile(position=(20, 50), value=2048)
 board = Board()
 
 running = True
@@ -113,11 +144,13 @@ while running:
             running = False
         elif e.type == pg.KEYDOWN:
             if e.key in DIRECTIONS:
-                board.move_tiles(DIRECTIONS[e.key])
+                board.handle_input(DIRECTIONS[e.key])
 
-    board.update(dt)
+    #board.update()
     screen.fill(BACKGROUND_COLOR)
     board.draw()
     pg.display.update()
 
 pg.quit()
+
+# TODO: Add animations.
