@@ -9,13 +9,14 @@ pg.init()
 
 BOARD_SIZE = 4  # length n either direction
 TILE_SIZE = 100
-MARGIN_WIDTH = 20
-GAP_WIDTH = 5
-SCREEN_SIZE = TILE_SIZE * BOARD_SIZE + MARGIN_WIDTH * 2 + GAP_WIDTH * (BOARD_SIZE - 1)
+GAP_WIDTH = 10
+BACKGROUND_PATTERN_OVERSIZE = 4
+SCREEN_SIZE = TILE_SIZE * BOARD_SIZE + GAP_WIDTH * 2 + GAP_WIDTH * (BOARD_SIZE - 1)
 FONT_SIZE = 30
 FONT = pg.font.SysFont("Comic Sans MS", FONT_SIZE)
 CHANCE_OF_4 = 0.1
 BACKGROUND_COLOR = (150, 150, 150)
+BACKGROUND_PATTERN_COLOR = [200, 200, 200]
 FONT_COLOR = (255, 255, 255)
 TILE_COLORS = {
     2: (188, 32, 223),
@@ -73,8 +74,8 @@ class Tile:
 
     def update_position(self, x, y):
         self.position = (
-            MARGIN_WIDTH + (TILE_SIZE + GAP_WIDTH) * x,
-            MARGIN_WIDTH + (TILE_SIZE + GAP_WIDTH) * y
+            GAP_WIDTH + (TILE_SIZE + GAP_WIDTH) * x,
+            GAP_WIDTH + (TILE_SIZE + GAP_WIDTH) * y
         )
         self.rect.topleft = self.position
 
@@ -86,6 +87,23 @@ class Board:
     def __init__(self):
         self.board = [[None for y in range(BOARD_SIZE)] for x in range(BOARD_SIZE)]
         self.tiles = set()
+
+        self.surface = pg.Surface((SCREEN_SIZE, SCREEN_SIZE))
+        self.surface.fill(BACKGROUND_COLOR)
+        smaller_margin = GAP_WIDTH - BACKGROUND_PATTERN_OVERSIZE // 2
+        smaller_gap = GAP_WIDTH - BACKGROUND_PATTERN_OVERSIZE
+        for x in range(BOARD_SIZE):
+            for y in range(BOARD_SIZE):
+                pg.draw.rect(
+                    self.surface,
+                    BACKGROUND_PATTERN_COLOR,
+                    pg.Rect(
+                        smaller_margin + (TILE_SIZE + GAP_WIDTH) * x,
+                        smaller_margin + (TILE_SIZE + GAP_WIDTH) * y,
+                        TILE_SIZE + BACKGROUND_PATTERN_OVERSIZE,
+                        TILE_SIZE + BACKGROUND_PATTERN_OVERSIZE
+                    )
+                )
 
         # place the first two tiles:
         tiles_placed = 0
@@ -130,6 +148,7 @@ class Board:
                      tile.update_position(x, y)
 
     def draw(self):
+        screen.blit(self.surface, (0, 0))
         for tile in self.tiles:
             tile.draw()
 
@@ -146,8 +165,6 @@ while running:
             if e.key in DIRECTIONS:
                 board.handle_input(DIRECTIONS[e.key])
 
-    #board.update()
-    screen.fill(BACKGROUND_COLOR)
     board.draw()
     pg.display.update()
 
