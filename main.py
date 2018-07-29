@@ -1,9 +1,10 @@
-import colorsys
+import os
 import random
 
 import pygame as pg
 
 
+os.environ["SDL_VIDEO_CENTERED"] = "1"
 pg.init()
 
 
@@ -91,7 +92,6 @@ class Board:
         self.surface = pg.Surface((SCREEN_SIZE, SCREEN_SIZE))
         self.surface.fill(BACKGROUND_COLOR)
         smaller_margin = GAP_WIDTH - BACKGROUND_PATTERN_OVERSIZE // 2
-        smaller_gap = GAP_WIDTH - BACKGROUND_PATTERN_OVERSIZE
         for x in range(BOARD_SIZE):
             for y in range(BOARD_SIZE):
                 pg.draw.rect(
@@ -105,16 +105,22 @@ class Board:
                     )
                 )
 
-        # place the first two tiles:
-        tiles_placed = 0
-        while tiles_placed < 2:
-            x = random.choice(range(BOARD_SIZE))
-            y = random.choice(range(BOARD_SIZE))
+        # Place the first two tiles:
+        self.spawn_new_tile()
+        self.spawn_new_tile()
+
+    def spawn_new_tile(self, x=None, y=None, value=None):
+        tile_placed = False
+        while not tile_placed:
+            print(tile_placed)
+            if x is None and y is None:
+                x = random.choice(range(BOARD_SIZE))
+                y = random.choice(range(BOARD_SIZE))
             if self.board[x][y] is None:
-                new_tile = Tile(x, y)
+                new_tile = Tile(x, y, value)
                 self.board[x][y] = new_tile
                 self.tiles.add(new_tile)
-                tiles_placed += 1
+                tile_placed = True
 
     def handle_input(self, direction):
         self.move_tiles(DIRECTION_ROTATION_LEFT[direction])
@@ -130,14 +136,37 @@ class Board:
     def move_tiles(self, rotate_n):
         self.rotate_board(rotate_n)
 
-        for y in range(BOARD_SIZE):
-            for x in range(1, BOARD_SIZE):
-                tile = self.board[x][y]
-                if tile is not None:
+        spawn_new_random = False
+        something_changed = True
+        # Loop until the board does not change anymore.
+        while something_changed:
+            something_changed = False
+            for y in range(BOARD_SIZE):
+                for x in range(1, BOARD_SIZE):
+                    tile = self.board[x][y]
+                    if tile is None or (x - 1) < 0:
+                        continue
+
                     left_tile = self.board[x - 1][y]
                     if left_tile is None:
                         self.board[x - 1][y] = tile
                         self.board[x][y] = None
+                        something_changed = True
+                        spawn_new_random = True
+                    elif left_tile.value == tile.value:
+                        new_value = tile.value * tile.value
+                        self.tiles.remove(left_tile)
+                        self.board[x - 1][y] = None
+                        self.tiles.remove(tile)
+                        self.board[x][y] = None
+                        new_tile = Tile(x - 1, y, new_value)
+                        self.board[x - 1][y] = new_tile
+                        self.tiles.add(new_tile)
+                        something_changed = True
+                        spawn_new_random = True
+
+        if spawn_new_random:
+            self.spawn_new_tile()
 
         self.rotate_board(4 - rotate_n)  # Rotate the board back.
 
@@ -145,7 +174,12 @@ class Board:
             for y in range(BOARD_SIZE):
                 tile = self.board[x][y]
                 if tile is not None:
-                     tile.update_position(x, y)
+                    tile.update_position(x, y)
+
+    def detect_loss(self):
+        # Scan the board and see if the player lost the game.
+        # If the board is full: for every tile: is there at least one neighbor with the same value?
+        pass
 
     def draw(self):
         screen.blit(self.surface, (0, 0))
@@ -162,6 +196,8 @@ while running:
         if e.type == pg.QUIT:
             running = False
         elif e.type == pg.KEYDOWN:
+            if e.key == pg.K_ESCAPE:
+                running = False
             if e.key in DIRECTIONS:
                 board.handle_input(DIRECTIONS[e.key])
 
@@ -169,5 +205,3 @@ while running:
     pg.display.update()
 
 pg.quit()
-
-# TODO: Add animations.
