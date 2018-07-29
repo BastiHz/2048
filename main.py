@@ -111,7 +111,7 @@ class Board:
         self.spawn_new_tile()
 
     def spawn_new_tile(self, x=None, y=None, value=None):
-        print(f"About to spawn a new tile at {x}, {y}, value = {'random' if value is None else value}")
+        # print(f"About to spawn a new tile at {x}, {y}, value = {'random' if value is None else value}")
         if x is None and y is None:
             while True:
                 x = random.choice(range(BOARD_SIZE))
@@ -121,8 +121,8 @@ class Board:
         new_tile = Tile(x, y, value)
         self.board[x][y] = new_tile
         self.tiles.add(new_tile)
-        print(f"Spawned new tile at {x}, {y}, value = {value}")
-        print("---")
+        # print(f"Spawned new tile at {x}, {y}, value = {value}")
+        # print("---")
 
     def handle_input(self, direction):
         self.move_tiles(DIRECTION_ROTATION_LEFT[direction])
@@ -157,7 +157,6 @@ class Board:
                         spawn_new_random = True
                     elif left_tile.value == tile.value and not left_tile.merge_lock and not tile.merge_lock:
                         new_value = tile.value * 2
-                        print(new_value)
                         self.tiles.remove(left_tile)
                         self.board[x - 1][y] = None
                         self.tiles.remove(tile)
@@ -180,8 +179,24 @@ class Board:
 
     def detect_loss(self):
         # Scan the board and see if the player lost the game.
-        # If the board is full: for every tile: is there at least one neighbor with the same value?
-        pass
+        # If the board is full: for every tile: is there at least one neighbor with the same value so it can merge?
+        if len(self.tiles) < BOARD_SIZE * BOARD_SIZE:
+            return False
+        for x in range(BOARD_SIZE):
+            for y in range(BOARD_SIZE):
+                value = self.board[x][y].value
+                neighbors_xy = [
+                    [x - 1, y],
+                    [x + 1, y],
+                    [x, y - 1],
+                    [x, y + 1]
+                ]
+                for n in neighbors_xy:
+                    if (0 <= n[0] < 4) and (0 <= n[1] < 4):
+                        if self.board[n[0]][n[1]].value == value:
+                            return False
+        print("You lost the game.")
+        return True
 
     def draw(self):
         screen.blit(self.surface, (0, 0))
@@ -194,6 +209,9 @@ board = Board()
 running = True
 while running:
     dt = clock.tick(60)
+
+    running = not board.detect_loss()
+
     for e in pg.event.get():
         if e.type == pg.QUIT:
             running = False
