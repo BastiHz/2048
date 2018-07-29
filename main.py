@@ -72,6 +72,7 @@ class Tile:
         number_rect.center = self.rect.center
         self.surface.blit(number_surf, number_rect)
         self.update_position(grid_x, grid_y)
+        self.merge_lock = True  # If True tile will not merge with others.
 
     def update_position(self, x, y):
         self.position = (
@@ -110,17 +111,18 @@ class Board:
         self.spawn_new_tile()
 
     def spawn_new_tile(self, x=None, y=None, value=None):
-        tile_placed = False
-        while not tile_placed:
-            print(tile_placed)
-            if x is None and y is None:
+        print(f"About to spawn a new tile at {x}, {y}, value = {'random' if value is None else value}")
+        if x is None and y is None:
+            while True:
                 x = random.choice(range(BOARD_SIZE))
                 y = random.choice(range(BOARD_SIZE))
-            if self.board[x][y] is None:
-                new_tile = Tile(x, y, value)
-                self.board[x][y] = new_tile
-                self.tiles.add(new_tile)
-                tile_placed = True
+                if self.board[x][y] is None:
+                    break
+        new_tile = Tile(x, y, value)
+        self.board[x][y] = new_tile
+        self.tiles.add(new_tile)
+        print(f"Spawned new tile at {x}, {y}, value = {value}")
+        print("---")
 
     def handle_input(self, direction):
         self.move_tiles(DIRECTION_ROTATION_LEFT[direction])
@@ -153,15 +155,14 @@ class Board:
                         self.board[x][y] = None
                         something_changed = True
                         spawn_new_random = True
-                    elif left_tile.value == tile.value:
-                        new_value = tile.value * tile.value
+                    elif left_tile.value == tile.value and not left_tile.merge_lock and not tile.merge_lock:
+                        new_value = tile.value * 2
+                        print(new_value)
                         self.tiles.remove(left_tile)
                         self.board[x - 1][y] = None
                         self.tiles.remove(tile)
                         self.board[x][y] = None
-                        new_tile = Tile(x - 1, y, new_value)
-                        self.board[x - 1][y] = new_tile
-                        self.tiles.add(new_tile)
+                        self.spawn_new_tile(x - 1, y, new_value)
                         something_changed = True
                         spawn_new_random = True
 
@@ -175,6 +176,7 @@ class Board:
                 tile = self.board[x][y]
                 if tile is not None:
                     tile.update_position(x, y)
+                    tile.merge_lock = False
 
     def detect_loss(self):
         # Scan the board and see if the player lost the game.
