@@ -10,4 +10,4 @@ You need Python 3 and Pygame. Start the game by running main.py. I recommend ins
 
 ## Info
 
-This project is licensed under the GPLv3. See LICENSE.txt for details. 
+This project is licensed under the MIT license. See LICENSE.txt for details. 
