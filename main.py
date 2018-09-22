@@ -28,7 +28,9 @@ BOARD_SIZE = 4  # length n either direction
 TILE_SIZE = 100
 GAP_WIDTH = 10
 BACKGROUND_PATTERN_OVERSIZE = 4
-SCREEN_SIZE = TILE_SIZE * BOARD_SIZE + GAP_WIDTH * 2 + GAP_WIDTH * (BOARD_SIZE - 1)
+SCREEN_SIZE = (TILE_SIZE * BOARD_SIZE
+               + GAP_WIDTH * 2
+               + GAP_WIDTH * (BOARD_SIZE - 1))
 FONT_SIZE = 30
 FONT = pg.font.SysFont("Comic Sans MS", FONT_SIZE)
 CHANCE_OF_4 = 0.1
@@ -103,7 +105,8 @@ class Tile:
 
 class Board:
     def __init__(self):
-        self.board = [[None for y in range(BOARD_SIZE)] for x in range(BOARD_SIZE)]
+        self.board = [[None for y in range(BOARD_SIZE)]
+                      for x in range(BOARD_SIZE)]
         self.tiles = set()
 
         self.surface = pg.Surface((SCREEN_SIZE, SCREEN_SIZE))
@@ -127,7 +130,6 @@ class Board:
         self.spawn_new_tile()
 
     def spawn_new_tile(self, x=None, y=None, value=None):
-        # print(f"About to spawn a new tile at {x}, {y}, value = {'random' if value is None else value}")
         if x is None and y is None:
             while True:
                 x = random.choice(range(BOARD_SIZE))
@@ -171,7 +173,9 @@ class Board:
                         self.board[x][y] = None
                         something_changed = True
                         spawn_new_random = True
-                    elif left_tile.value == tile.value and not left_tile.merge_lock and not tile.merge_lock:
+                    elif (left_tile.value == tile.value
+                          and not left_tile.merge_lock
+                          and not tile.merge_lock):
                         new_value = tile.value * 2
                         self.tiles.remove(left_tile)
                         self.board[x - 1][y] = None
@@ -195,7 +199,8 @@ class Board:
 
     def detect_loss(self):
         # Scan the board and see if the player lost the game.
-        # If the board is full: for every tile: is there at least one neighbor with the same value so it can merge?
+        # If the board is full: for every tile: is there at least one
+        # neighbor with the same value so it can merge?
         if len(self.tiles) < BOARD_SIZE * BOARD_SIZE:
             return False
         for x in range(BOARD_SIZE):
