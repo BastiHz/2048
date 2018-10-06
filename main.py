@@ -1,8 +1,8 @@
 """Run this file to start the game.
 
 Copyright 2018 Sebastian Henz
-This project is licensed under the MIT license. See the file 
-LICENSE.txt for details.
+This project is licensed under the MIT license. See file 
+LICENSE for details.
 """
 
 import os
