@@ -34,6 +34,7 @@ SMALLER_MARGIN = GAP_WIDTH - BACKGROUND_PATTERN_OVERSIZE // 2
 SCREEN_SIZE = (TILE_SIZE * BOARD_SIZE
                + GAP_WIDTH * 2
                + GAP_WIDTH * (BOARD_SIZE - 1))
+screen = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 FONT_SIZE = 30
 FONT = pg.font.SysFont("Comic Sans MS", FONT_SIZE)
 CHANCE_OF_2 = 0.9
@@ -82,37 +83,37 @@ for p in range(1, 18):
     text_rect.center = surface.get_rect().center
     surface.blit(text_surface, text_rect)
     TILE_SURFACES[value] = surface
+board_coordinates = list(itertools.product(range(BOARD_SIZE), repeat=2))
+background = pg.Surface((SCREEN_SIZE, SCREEN_SIZE))
+background.fill(BACKGROUND_COLOR)
+for x, y in board_coordinates:
+    pg.draw.rect(
+        background,
+        BACKGROUND_PATTERN_COLOR,
+        pg.Rect(
+            SMALLER_MARGIN + (TILE_SIZE + GAP_WIDTH) * x,
+            SMALLER_MARGIN + (TILE_SIZE + GAP_WIDTH) * y,
+            TILE_SIZE + BACKGROUND_PATTERN_OVERSIZE,
+            TILE_SIZE + BACKGROUND_PATTERN_OVERSIZE
+        )
+    )
 
 
 class Game:
     def __init__(self):
         self.running = True
+        self.clock = pg.time.Clock()
+        self.new_game()
+
+    def new_game(self):
         self.board = [[0 for y in range(BOARD_SIZE)] for x in range(BOARD_SIZE)]
-        self.board_coordinates = list(itertools.product(range(BOARD_SIZE), repeat=2))
-        self.screen = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
-
-        # Place the first two tiles:
         self.new_tile()
         self.new_tile()
-
-        self.background = pg.Surface((SCREEN_SIZE, SCREEN_SIZE))
-        self.background.fill(BACKGROUND_COLOR)
-        for x, y in self.board_coordinates:
-            pg.draw.rect(
-                self.background,
-                BACKGROUND_PATTERN_COLOR,
-                pg.Rect(
-                    SMALLER_MARGIN + (TILE_SIZE + GAP_WIDTH) * x,
-                    SMALLER_MARGIN + (TILE_SIZE + GAP_WIDTH) * y,
-                    TILE_SIZE + BACKGROUND_PATTERN_OVERSIZE,
-                    TILE_SIZE + BACKGROUND_PATTERN_OVERSIZE
-                )
-            )
+        self.game_over = False
 
     def run(self):
-        clock = pg.time.Clock()
         while self.running:
-            dt = clock.tick(60)
+            self.clock.tick(30)
             self.detect_loss()
             self.handle_input()
             self.draw()
@@ -129,15 +130,13 @@ class Game:
         else:
             value = 2 if random.random() < CHANCE_OF_2 else 4
         self.board[x][y] = value
-        print(f"Spawned new tile at {x}, {y}, value = {value}")
-        print("---")
 
     def detect_loss(self):
         """Scan the board and see if the player lost the game.
         If the board is full: for every tile: is there at least one
         neighbor with the same value so it can merge?
         """
-        for x, y in self.board_coordinates:
+        for x, y in board_coordinates:
             value = self.board[x][y]
             if value == 0:
                 return
@@ -151,7 +150,7 @@ class Game:
                 if 0 <= nx < BOARD_SIZE and 0 <= ny < BOARD_SIZE \
                         and self.board[nx][ny] == value:
                     return
-        self.running = False
+        self.game_over = True
 
     def handle_input(self):
         for e in pg.event.get():
@@ -160,19 +159,20 @@ class Game:
             elif e.type == pg.KEYDOWN:
                 if e.key == pg.K_ESCAPE:
                     self.running = False
-                if e.key in DIRECTIONS:
+                elif e.key in DIRECTIONS and not self.game_over:
                     self.move_tiles(DIRECTIONS[e.key])
+                elif e.key == pg.K_n:
+                    self.new_game()
 
     def rotate_board(self, n):
         """Rotate the board n times 90° counterclockwise."""
         for _ in range(n):
-            self.board = [list(column) for column in zip(*self.board[::-1])]
+            self.board = list(zip(*self.board[::-1]))
+        self.board = [list(column) for column in self.board]
 
     def move_tiles(self, direction):
         n_rotations = DIRECTION_ROTATIONS[direction]
-        # print(self.board)
         self.rotate_board(n_rotations)
-        # print(self.board)
 
         locked_positions = set()  # cannot merge in this frame
         spawn_new = False
@@ -204,15 +204,15 @@ class Game:
             self.new_tile()
 
     def draw(self):
-        self.screen.blit(self.background, (0, 0))
+        screen.blit(background, (0, 0))
 
-        for x, y in self.board_coordinates:
+        for x, y in board_coordinates:
             if self.board[x][y] > 0:
                 position = (
                     GAP_WIDTH + (TILE_SIZE + GAP_WIDTH) * x,
                     GAP_WIDTH + (TILE_SIZE + GAP_WIDTH) * y
                 )
-                self.screen.blit(TILE_SURFACES[self.board[x][y]], position)
+                screen.blit(TILE_SURFACES[self.board[x][y]], position)
 
         pg.display.update()
 
